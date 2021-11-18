@@ -4,6 +4,8 @@ This project aims to be the hub of acoustic keylogging. There will be a database
 # Use Case
 The use case of this project will be to see what keys have been pressed by somebody on a computer based on the audio signatures of captured data, and knowledge of the computer of whose keys were pressed.
 
+The program will exploit the fact that all laptops of the same brand utilise very similar microphone modules, and keyboards that will sound near identical. During model training, various samples of background noise will be added to create a robust model.
+
 The main program will have both assist and attack functionality:
 - Assist: Record key signatures on the laptop of the user, create the model, and upload to the server (must be verified before pushing out)
 - Attack: Download the relevant model for the laptop being attacked, pass the audio signatures into the program, and let the program do its magic to extract the keys
