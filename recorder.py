@@ -1,30 +1,57 @@
 import sounddevice as sd
 from scipy.io.wavfile import write
-import msvcrt
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+import os
+import scipy.io as sci
+from random import randrange
+import random
 
 fs = 44100  # Sample rate
+press_dur = 0.2
 
-def record(key):
-    print("Press the key you want to extract")
-    while True:
-        if msvcrt.kbhit():
-            key_stroke = msvcrt.getch()
-            print('You will be recording the', str(key_stroke)[2], 'key...')   # will print which key is pressed
-            break
+bg_tracks = []
 
-    recording = sd.rec(int(5 * fs), samplerate=fs, channels=1)
+def load_background_noises():
+    os.chdir('./background_noise')
+    print(os.getcwd())
+    files = [f for f in os.listdir('.') if os.path.isfile(f)]
+    for f in files:
+        print('Loading background noise file:', f)
+        bg_tracks.append(sci.wavfile.read(f))
+    os.chdir('..')
+
+def record_background_noise():
+    recording = sd.rec(30 * fs, samplerate = fs, channels=1)
     sd.wait()  # Wait until recording is finished
-    splitted = split_audio(recording, 44100, 0.2, 0.0075, 0.05, 0.0005)
+    write('./background.wav', fs, recording)
+
+# Record samples for x duration
+def record(key, dur):
+    print('You will be recording the', key, 'key in 3 seconds')   # will print which key is pressed
+
+    for i in range(3):
+        print(3 - i)
+        time.sleep(1)
+
+
+    recording = sd.rec(int(dur * fs), samplerate = fs, channels=1)
+    print(dur, "Second recording started...")
+    sd.wait()  # Wait until recording is finished
+    splitted = split_audio(recording, fs, press_dur, 0.0075, 0.05, 0.0005)
+
+    os.mkdir(key)
 
     i = 0
     for sample in splitted:
-        write('key' + str(i) + '.wav', fs, np.array(sample))
+        write('./' + key + '/' + str(i) + '.wav', fs, np.array(sample))
         i+=1
 
-    return splitted
+    extended_splitted = extend_dataset(splitted, key)
+
+    return extended_splitted
 
 #
 # audio_data = captured data in np array form
@@ -50,10 +77,10 @@ def split_audio(audio_data, rate, duration, jump_back, threshold, split_dur):
             
             if (end_index < len(audio_data)):
 
-                print("Keypress detected at index:", start_index)
+                #print("Keypress detected at index:", start_index)
 
                 for j in range(start_index, end_index):
-                    sample.append(audio_data[j])
+                    sample.append(np.array(audio_data[j]))
                 
                 samples.append(sample)
 
@@ -61,16 +88,58 @@ def split_audio(audio_data, rate, duration, jump_back, threshold, split_dur):
 
         i+=1
 
-    print("Samples detected:", len(samples))
+    print("Number of samples detected:", len(samples), '\n')
     
-    return samples
+    return np.array(samples)
 
+# Plot the audio file on matplotlib
 def plot_audio(audio_data):
     plt.plot(range(0, audio_data.size), audio_data)
     plt.show()
 
+# Plot the list of extracted samples
 def plot_extracted_samples(samples):
     for j in range(len(samples)):
         plt.plot(range(len(samples[j])), samples[j])
         plt.show()
+
+def record_test():
+    print("Recording of test started")
+    recording = sd.rec(10 * fs, samplerate = fs, channels=1)
+    sd.wait()  # Wait until recording is finished
+    write('./test.wav', fs, recording)
+    print("Test saved")
+
+def get_test_samples():
+    recording = np.array(sci.wavfile.read('./test.wav')[1], copy=True)
+    splitted = split_audio(recording, fs, press_dur, 0.0075, 0.05, 0.0005)
+    return splitted
+
+def extend_dataset(samples, key):
+    print("Extending dataset...")
+    extended_samples = []
+
+    name_val = len(samples)
+
+    for k in range(4):
+        for i in range(len(samples)):
+            newdata = []
+
+            random_track = bg_tracks[randrange(len(bg_tracks)-1)]
+
+            start_index = randrange(0, len(random_track[1]) - press_dur * fs)
+
+            for j in range(len(samples[i])):
+                val = samples[i][j] + random_track[1][start_index + j]
+                newdata.append(val)
+
+            write('./' + key + '/' + str(name_val) + '.wav', fs, np.array(newdata))
+
+            extended_samples.append(newdata)
+
+            name_val += 1
+
+    return extended_samples
+
+    
     
