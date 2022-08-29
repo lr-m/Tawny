@@ -12,22 +12,6 @@ import random
 fs = 44100  # Sample rate
 press_dur = 0.2
 
-bg_tracks = []
-
-def load_background_noises():
-    os.chdir('./background_noise')
-    print(os.getcwd())
-    files = [f for f in os.listdir('.') if os.path.isfile(f)]
-    for f in files:
-        print('Loading background noise file:', f)
-        bg_tracks.append(sci.wavfile.read(f))
-    os.chdir('..')
-
-def record_background_noise():
-    recording = sd.rec(30 * fs, samplerate = fs, channels=1)
-    sd.wait()  # Wait until recording is finished
-    write('./background.wav', fs, recording)
-
 # Record samples for x duration
 def record(key, dur):
     print('You will be recording the', key, 'key in 3 seconds')   # will print which key is pressed
@@ -40,7 +24,7 @@ def record(key, dur):
     recording = sd.rec(int(dur * fs), samplerate = fs, channels=1)
     print(dur, "Second recording started...")
     sd.wait()  # Wait until recording is finished
-    splitted = split_audio(recording, fs, press_dur, 0.0075, 0.05, 0.0005)
+    splitted = split_audio(recording, fs, press_dur, 0.0075, 0.04, 0.0005)
 
     os.mkdir(key)
 
@@ -49,9 +33,7 @@ def record(key, dur):
         write('./' + key + '/' + str(i) + '.wav', fs, np.array(sample))
         i+=1
 
-    extended_splitted = extend_dataset(splitted, key)
-
-    return extended_splitted
+    return splitted
 
 #
 # audio_data = captured data in np array form
@@ -107,39 +89,24 @@ def record_test():
     print("Recording of test started")
     recording = sd.rec(10 * fs, samplerate = fs, channels=1)
     sd.wait()  # Wait until recording is finished
-    write('./test.wav', fs, recording)
-    print("Test saved")
+    # write('./test.wav', fs, recording)
+    # print("Test saved")
+
+    splitted = split_audio(recording, fs, press_dur, 0.0075, 0.04, 0.0005)
+
+    os.chdir('test_samples')
+
+    i = 0
+    for sample in splitted:
+        write('./' + str(i) + '.wav', fs, np.array(sample))
+        i+=1
+
+    os.chdir('..')
 
 def get_test_samples():
     recording = np.array(sci.wavfile.read('./test.wav')[1], copy=True)
     splitted = split_audio(recording, fs, press_dur, 0.0075, 0.05, 0.0005)
     return splitted
-
-def extend_dataset(samples, key):
-    print("Extending dataset...")
-    extended_samples = []
-
-    name_val = len(samples)
-
-    for k in range(4):
-        for i in range(len(samples)):
-            newdata = []
-
-            random_track = bg_tracks[randrange(len(bg_tracks)-1)]
-
-            start_index = randrange(0, len(random_track[1]) - press_dur * fs)
-
-            for j in range(len(samples[i])):
-                val = samples[i][j] + random_track[1][start_index + j]
-                newdata.append(val)
-
-            write('./' + key + '/' + str(name_val) + '.wav', fs, np.array(newdata))
-
-            extended_samples.append(newdata)
-
-            name_val += 1
-
-    return extended_samples
 
     
     
