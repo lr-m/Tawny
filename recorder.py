@@ -13,20 +13,24 @@ fs = 44100  # Sample rate
 press_dur = 0.2
 
 # Record samples for x duration
-def record(key, dur):
-    print('You will be recording the', key, 'key in 3 seconds')   # will print which key is pressed
+def record(key, dur, output):
+    output.set('You will be recording the ' + key + ' key in:')
 
     for i in range(3):
-        print(3 - i)
+        output.set(output.get() + '\n' + str(3-i))
         time.sleep(1)
 
+    output.set(output.get() + "\nRecording...\n")
 
     recording = sd.rec(int(dur * fs), samplerate = fs, channels=1)
-    print(dur, "Second recording started...")
     sd.wait()  # Wait until recording is finished
     splitted = split_audio(recording, fs, press_dur, 0.0075, 0.04, 0.0005)
 
     os.mkdir(key)
+
+    output.set(output.get() + "\nNumber of samples detected: " + str(len(splitted)))
+
+    time.sleep(1)
 
     i = 0
     for sample in splitted:
@@ -58,9 +62,6 @@ def split_audio(audio_data, rate, duration, jump_back, threshold, split_dur):
             end_index = int(start_index + (duration * rate))
             
             if (end_index < len(audio_data)):
-
-                #print("Keypress detected at index:", start_index)
-
                 for j in range(start_index, end_index):
                     sample.append(np.array(audio_data[j]))
                 
@@ -69,8 +70,6 @@ def split_audio(audio_data, rate, duration, jump_back, threshold, split_dur):
                 i = math.ceil(end_index / split)
 
         i+=1
-
-    print("Number of samples detected:", len(samples), '\n')
     
     return np.array(samples)
 
@@ -85,12 +84,12 @@ def plot_extracted_samples(samples):
         plt.plot(range(len(samples[j])), samples[j])
         plt.show()
 
-def record_test():
-    print("Recording of test started")
-    recording = sd.rec(10 * fs, samplerate = fs, channels=1)
+def record_test(output, val):
+    output.set("Recording of test started...\n")
+    recording = sd.rec(int(val.get()) * fs, samplerate = fs, channels=1)
     sd.wait()  # Wait until recording is finished
     # write('./test.wav', fs, recording)
-    # print("Test saved")
+    output.set("Recording complete...\n")
 
     splitted = split_audio(recording, fs, press_dur, 0.0075, 0.04, 0.0005)
 
